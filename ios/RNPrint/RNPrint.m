@@ -29,7 +29,7 @@ RCT_EXPORT_MODULE();
     UIPrintInfo *printInfo = [UIPrintInfo printInfo];
     
     printInfo.outputType = UIPrintInfoOutputGeneral;
-    printInfo.jobName = [_uri lastPathComponent];
+    printInfo.jobName = _jobName == nil ? [_uri lastPathComponent] : _jobName;
     printInfo.duplex = UIPrintInfoDuplexLongEdge;
     printInfo.orientation = _isLandscape? UIPrintInfoOrientationLandscape: UIPrintInfoOrientationPortrait;
     
@@ -72,6 +72,12 @@ RCT_EXPORT_METHOD(print:(NSDictionary *)options
         _uri = [RCTConvert NSString:options[@"uri"]];
     } else {
         _uri = nil;
+    }
+
+    if (options[@"jobName"]){
+        _jobName = [RCTConvert NSString:options[@"jobName"]];
+    } else {
+        _jobName = nil;
     }
     
     if (options[@"html"]){
