@@ -50,6 +50,55 @@ new MainReactPackage(),
 new RNPrintPackage(),
 ```
 
+#### Windows
+
+1. In `windows/myapp.sln` add the `RNPrint` project to your solution:
+
+   - Open the solution in Visual Studio 2019
+   - Right-click Solution icon in Solution Explorer > Add > Existing Project
+   - Select `node_modules\react-native-print\windows\RNPrint\RNPrint.vcxproj`
+
+2. In `windows/myapp/myapp.vcxproj` ad a reference to `RNPrint` to your main application project. From Visual Studio 2019:
+
+   - Right-click main application project > Add > Reference...
+   - Check `RNPrint` from Solution Projects.
+
+3. In `pch.h` add `#include "winrt/RNPrint.h"`.
+
+4. In `app.cpp` add `PackageProviders().Append(winrt::RNPrint::ReactPackageProvider());` before `InitializeComponent();`.
+
+### Windows print canvas
+
+On Windows, `react-native-print` needs an element in the visual tree to add the printable pages to.
+It will look for a XAML `Canvas` named `RNPrintCanvas` and use it.
+This needs to be added to the XAML tree of the screens where `react-native-print` is used.
+
+As an example, in `windows/myapp/MainPage.xaml` from the `react-native-windows` app template this can be done by adding a XAML `Grid` with an invisible `Canvas` alongside the `ReactRootView`. Change `windows/myapp/MainPage.xaml` from:
+```xaml
+<Page
+  ...
+  >
+  <react:ReactRootView
+    x:Name="ReactRootView"
+    ...
+  />
+</Page>
+```
+to
+```xaml
+<Page
+  ...
+  >
+  <Grid>
+    <Canvas x:Name="RNPrintCanvas" Opacity="0" />
+    <react:ReactRootView
+      x:Name="ReactRootView"
+      ...
+    />
+  </Grid>
+</Page>
+```
+
 
 ## Usage
 ```javascript
@@ -168,11 +217,13 @@ const styles = StyleSheet.create({
 ## print(options: Object)
 | Param | Type | Note |
 |---|---|---|
-| `html` | `string` |  HTML string to print
 | `uri` | `string` |  URI of a PDF file to print. Remote, local, or base64 data URI starting with `data:application/pdf;base64,`. This only supports PDF, not other types of documents (e.g. images).
-| `fileName` | `string` | Custom Filename excluding .pdf extension or remote file url NOTE: iOS only supports https protocols
+| `html` | `string` |  **iOS and Android Only:** HTML string to print
+| `filePath` | `string` | Local or remote file url NOTE: iOS only supports https protocols for remote
 | `printerURL` | `string` | **iOS Only:** URL returned from `selectPrinterMethod()`
 | `isLandscape` | `bool` | Landscape print; default value is false
+| `jobName` | `string` | **iOS and Android Only:** Name of printing job; default value is "Document"
+| `baseUrl` | `string` | **Android Only:** Used to resolve relative links in the HTML. Also used for the origin header when applying same origin policy (CORS). Reference [Android WebView Docs](https://developer.android.com/reference/android/webkit/WebView#loadDataWithBaseURL(java.lang.String,%20java.lang.String,%20java.lang.String,%20java.lang.String,%20java.lang.String))
 
 
 ## selectPrinter(options: Object)

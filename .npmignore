@@ -1,4 +1,4 @@
-example
+example/
 
 # JetBrains
 .idea
@@ -6,3 +6,6 @@ example
 .settings
 .idea/*
 *.iml
+
+# Android build files
+android/build/

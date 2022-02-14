@@ -1,6 +1,7 @@
 package com.christopherdro.RNPrint;
 
 import android.content.Context;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.CancellationSignal;
 import android.os.ParcelFileDescriptor;
@@ -14,12 +15,17 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.util.Base64;
 
+import androidx.annotation.RequiresApi;
+
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.UiThreadUtil;
+import com.facebook.react.modules.network.CookieJarContainer;
+import com.facebook.react.modules.network.ForwardingCookieHandler;
+import com.facebook.react.modules.network.OkHttpClientProvider;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -28,8 +34,11 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.net.URL;
 
+import okhttp3.JavaNetCookieJar;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 
 /**
  * NativeModule that allows JS to open emails sending apps chooser.
@@ -37,7 +46,7 @@ import java.net.URL;
 public class RNPrintModule extends ReactContextBaseJavaModule {
 
     ReactApplicationContext reactContext;
-    final String jobName = "Document";
+    final String defaultJobName = "Document";
 
 
     public RNPrintModule(ReactApplicationContext reactContext) {
@@ -58,6 +67,8 @@ public class RNPrintModule extends ReactContextBaseJavaModule {
         final String html = options.hasKey("html") ? options.getString("html") : null;
         final String uri = options.hasKey("uri") ? options.getString("uri") : null;
         final boolean isLandscape = options.hasKey("isLandscape") ? options.getBoolean("isLandscape") : false;
+        final String jobName = options.hasKey("jobName") ? options.getString("jobName") : defaultJobName;
+        final String baseUrl = options.hasKey("baseUrl") ? options.getString("baseUrl") : null;
 
         if ((html == null && uri == null) || (html != null && uri != null)) {
             promise.reject(getName(), "Must provide either `html` or `uri`.  Both are either missing or passed together");
@@ -84,7 +95,7 @@ public class RNPrintModule extends ReactContextBaseJavaModule {
                                 // Create a wrapper PrintDocumentAdapter to clean up when done.
                                 PrintDocumentAdapter adapter = new PrintDocumentAdapter() {
                                     private final PrintDocumentAdapter mWrappedInstance =
-                                    mWebView.createPrintDocumentAdapter();
+                                    mWebView.createPrintDocumentAdapter(jobName);
                                     @Override
                                     public void onStart() {
                                         mWrappedInstance.onStart();
@@ -113,7 +124,7 @@ public class RNPrintModule extends ReactContextBaseJavaModule {
                             }
                         });
 
-                        webView.loadDataWithBaseURL(null, html, "text/HTML", "UTF-8", null);
+                        webView.loadDataWithBaseURL(baseUrl, html, "text/HTML", "UTF-8", null);
 
                         // Keep a reference to WebView object until you pass the PrintDocumentAdapter
                         // to the PrintManager
@@ -135,11 +146,28 @@ public class RNPrintModule extends ReactContextBaseJavaModule {
                             if (URLUtil.isValidUrl(uri)) {
                                 new Thread(new Runnable() {
                                     public void run() {
+                                        CookieJarContainer cookieJarContainer = null;
+
                                         try {
                                             InputStream input = new URL(uri).openStream();
                                             loadAndClose(destination, callback, input);
+                                            OkHttpClient client = OkHttpClientProvider.createClient();
+                                            ForwardingCookieHandler cookieHandler = new ForwardingCookieHandler(reactContext);
+                                            cookieJarContainer = (CookieJarContainer) client.cookieJar();
+                                            cookieJarContainer.setCookieJar(new JavaNetCookieJar(cookieHandler));
+
+                                            Request.Builder requestBuilder = new Request.Builder().url(filePath);
+                                            Response res = client.newCall(requestBuilder.build()).execute();
+
+                                            loadAndClose(destination, callback, res.body().byteStream());
+
+                                            res.close();
                                         } catch (Exception e) {
                                             e.printStackTrace();
+                                        } finally {
+                                            if (cookieJarContainer != null) {
+                                                cookieJarContainer.removeCookieJar();
+                                            }
                                         }
                                     }
                                 }).start();

@@ -26,7 +26,7 @@ export default class RNPrintExample extends Component {
 
   // @NOTE iOS Only
   selectPrinter = async () => {
-    const selectedPrinter = await RNPrint.selectPrinter()
+    const selectedPrinter = await RNPrint.selectPrinter({})
     this.setState({ selectedPrinter })
   }
 
@@ -83,8 +83,8 @@ export default class RNPrintExample extends Component {
     return (
       <View style={styles.container}>
         {Platform.OS === 'ios' && this.customOptions()}
-        <Button onPress={this.printHTML} title="Print HTML" />
-        <Button onPress={this.printPDF} title="Print PDF" />
+        <Button onPress={this.printHTML} title="Print HTML" disabled={Platform.OS === 'windows'} />
+        <Button onPress={this.printPDF} title="Print PDF" disabled={Platform.OS === 'windows'} />
         <Button onPress={this.printRemotePDF} title="Print Remote PDF" />
       </View>
     );
