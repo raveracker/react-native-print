@@ -34,11 +34,13 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.URL;
 
 import okhttp3.JavaNetCookieJar;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
+
 
 /**
  * NativeModule that allows JS to open emails sending apps chooser.
@@ -156,7 +158,7 @@ public class RNPrintModule extends ReactContextBaseJavaModule {
                                             cookieJarContainer = (CookieJarContainer) client.cookieJar();
                                             cookieJarContainer.setCookieJar(new JavaNetCookieJar(cookieHandler));
 
-                                            Request.Builder requestBuilder = new Request.Builder().url(filePath);
+                                            Request.Builder requestBuilder = new Request.Builder().url(uri);
                                             Response res = client.newCall(requestBuilder.build()).execute();
 
                                             loadAndClose(destination, callback, res.body().byteStream());
